@@ -1,0 +1,92 @@
+from pydantic import BaseModel, Field, field_validator
+from typing import Optional
+
+class CategoryBase(BaseModel):
+    name: str = Field(..., description="Kategori adı")
+
+    @field_validator('name')
+    @classmethod
+    def name_must_not_be_empty(cls, value: str) -> str:
+        if not value or not value.strip():
+            raise ValueError('Kategori ismi boş bırakılamaz.')
+        return value
+
+class CategoryCreate(CategoryBase):
+    """Kategori oluştururken gelen istek (Request) modeli"""
+    pass
+
+class CategoryResponse(CategoryBase):
+    """Kullanıcıya dönen kategori (Response) modeli"""
+    id: int
+
+    model_config = {
+        "from_attributes": True  # Database model ayrımı ve serileştirme için
+    }
+
+
+class ProductBase(BaseModel):
+    name: str
+    price: float
+    stock: int
+    category_id: int
+
+    @field_validator('name')
+    @classmethod
+    def name_must_not_be_empty(cls, value: str) -> str:
+        if not value or not value.strip():
+            raise ValueError('Ürün ismi boş olamaz.')
+        return value
+
+    @field_validator('price')
+    @classmethod
+    def price_must_be_positive(cls, value: float) -> float:
+        if value <= 0:
+            raise ValueError('Fiyat sıfırdan büyük olmalıdır.')
+        return value
+
+    @field_validator('stock')
+    @classmethod
+    def stock_must_not_be_negative(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError('Stok negatif olamaz.')
+        return value
+
+class ProductCreate(ProductBase):
+    """Ürün oluştururken gelen istek (Request) modeli"""
+    pass
+
+class ProductResponse(ProductBase):
+    """Kullanıcıya dönen ürün (Response) modeli"""
+    id: int
+
+    model_config = {
+        "from_attributes": True  # Database model ayrımı ve serileştirme için
+    }
+
+class ProductUpdate(BaseModel):
+    """Ürün güncellerken kullanılan (Optional) model"""
+    name: Optional[str] = None
+    price: Optional[float] = None
+    stock: Optional[int] = None
+    category_id: Optional[int] = None
+
+    @field_validator('name')
+    @classmethod
+    def name_must_not_be_empty(cls, value: Optional[str]) -> Optional[str]:
+        if value is not None and (not value or not value.strip()):
+            raise ValueError('Ürün ismi boş bırakılamaz.')
+        return value
+
+    @field_validator('price')
+    @classmethod
+    def price_must_be_positive(cls, value: Optional[float]) -> Optional[float]:
+        if value is not None and value <= 0:
+            raise ValueError('Fiyat sıfırdan büyük olmalıdır.')
+        return value
+
+    @field_validator('stock')
+    @classmethod
+    def stock_must_not_be_negative(cls, value: Optional[int]) -> Optional[int]:
+        if value is not None and value < 0:
+            raise ValueError('Stok negatif olamaz.')
+        return value
