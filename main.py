@@ -1,9 +1,9 @@
 # E-Ticaret API Projesi
 from fastapi import FastAPI
 from pydantic import BaseModel
+from schemas import CreateCategoryRequest
 
 app = FastAPI()
-
 
 class Product(BaseModel):
     id: int
@@ -49,4 +49,3 @@ def delete_product(id: int):
             productList.pop(index)
             return {"mesaj": "Ürün silindi"}
     return {"hata": "Ürün bulunamadı"}
-
