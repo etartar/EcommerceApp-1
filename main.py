@@ -49,3 +49,4 @@ def delete_product(id: int):
             productList.pop(index)
             return {"mesaj": "Ürün silindi"}
     return {"hata": "Ürün bulunamadı"}
+

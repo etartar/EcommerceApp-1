@@ -12,6 +12,7 @@ class CreateCategoryRequest(BaseModel):
             raise ValueError('Kategori ismi boş bırakılamaz.')
         return value
 
+
 class UpdateCategoryRequest(BaseModel):
     """Kategori güncellerken gelen istek (Request) modeli"""
     name: str = Field(..., description="Kategori adı")
@@ -22,6 +23,7 @@ class UpdateCategoryRequest(BaseModel):
         if not value or not value.strip():
             raise ValueError('Kategori ismi boş bırakılamaz.')
         return value
+
 
 class CategoryResponse(BaseModel):
     """Kullanıcıya dönen kategori (Response) modeli"""
@@ -38,6 +40,10 @@ class ProductBase(BaseModel):
     price: float
     stock: int
     category_id: int
+
+
+class ProductCreate(ProductBase):
+    """Ürün oluştururken gelen istek (Request) modeli"""
 
     @field_validator('name')
     @classmethod
@@ -60,13 +66,30 @@ class ProductBase(BaseModel):
             raise ValueError('Stok negatif olamaz.')
         return value
 
-class ProductCreate(ProductBase):
-    """Ürün oluştururken gelen istek (Request) modeli"""
-    pass
-
 class ProductResponse(ProductBase):
     """Kullanıcıya dönen ürün (Response) modeli"""
     id: int
+    @field_validator('name')
+    @classmethod
+    def name_must_not_be_empty(cls, value: str) -> str:
+        if not value or not value.strip():
+            raise ValueError('Ürün ismi boş olamaz.')
+        return value
+
+    @field_validator('price')
+    @classmethod
+    def price_must_be_positive(cls, value: float) -> float:
+        if value <= 0:
+            raise ValueError('Fiyat sıfırdan büyük olmalıdır.')
+        return value
+
+    @field_validator('stock')
+    @classmethod
+    def stock_must_not_be_negative(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError('Stok negatif olamaz.')
+        return value
+
 
     model_config = {
         "from_attributes": True  # Database model ayrımı ve serileştirme için
