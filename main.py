@@ -3,6 +3,8 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from schemas import CreateCategoryRequest
 
+from schemas import CreateCategoryRequest, UpdateCategoryRequest, CategoryResponse
+
 app = FastAPI()
 
 class Product(BaseModel):
@@ -12,6 +14,7 @@ class Product(BaseModel):
 
 
 productList = []
+categoryList = []
 
 # 1. GET /products (Tüm ürünleri listele)
 @app.get("/products")
@@ -50,3 +53,50 @@ def delete_product(id: int):
             return {"mesaj": "Ürün silindi"}
     return {"hata": "Ürün bulunamadı"}
 
+
+# 1. GET /categories (Tüm kategorileri listele)
+@app.get("/categories", response_model=List[CategoryResponse])
+def get_categories():
+    return categoryList
+
+# 2. GET /categories/{id} (ID'ye göre kategori getir)
+@app.get("/categories/{id}", response_model=CategoryResponse)
+def get_category(id: int):
+    for category in categoryList:
+        if category["id"] == id:
+            return category
+
+# 3. POST /categories (Yeni kategori ekle)
+@app.post("/categories", response_model=CategoryResponse, status_code=status.HTTP_201_CREATED)
+def create_category(category_data: CreateCategoryRequest):
+    new_id = len(categoryList) + 1
+    
+    new_category = {
+        "id": new_id,
+        "name": category_data.name,
+        "description": category_data.description
+    }
+    
+    categoryList.append(new_category)
+    return new_category
+
+# 4. PUT /categories/{id} (Kategori güncelle)
+@app.put("/categories/{id}", response_model=CategoryResponse)
+def update_category(id: int, category_data: UpdateCategoryRequest):
+    for index, category in enumerate(categoryList):
+        if category["id"] == id:
+            updated_category = {
+                "id": id,
+                "name": category_data.name,
+                "description": category_data.description
+            }
+            categoryList[index] = updated_category
+            return updated_category
+        
+# 5. DELETE /categories/{id} (Kategori sil)
+@app.delete("/categories/{id}")
+def delete_category(id: int):
+    for index, category in enumerate(categoryList):
+        if category["id"] == id:
+            categoryList.pop(index)
+            return {"mesaj": "Kategori başarıyla silindi"}

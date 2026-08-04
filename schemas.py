@@ -69,28 +69,7 @@ class ProductCreate(ProductBase):
 class ProductResponse(ProductBase):
     """Kullanıcıya dönen ürün (Response) modeli"""
     id: int
-    @field_validator('name')
-    @classmethod
-    def name_must_not_be_empty(cls, value: str) -> str:
-        if not value or not value.strip():
-            raise ValueError('Ürün ismi boş olamaz.')
-        return value
-
-    @field_validator('price')
-    @classmethod
-    def price_must_be_positive(cls, value: float) -> float:
-        if value <= 0:
-            raise ValueError('Fiyat sıfırdan büyük olmalıdır.')
-        return value
-
-    @field_validator('stock')
-    @classmethod
-    def stock_must_not_be_negative(cls, value: int) -> int:
-        if value < 0:
-            raise ValueError('Stok negatif olamaz.')
-        return value
-
-
+    
     model_config = {
         "from_attributes": True  # Database model ayrımı ve serileştirme için
     }
