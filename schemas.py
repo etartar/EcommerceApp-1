@@ -101,3 +101,17 @@ class ProductUpdate(BaseModel):
         if value is not None and value < 0:
             raise ValueError('Stok negatif olamaz.')
         return value
+
+
+
+
+class SuccessResponse(BaseModel):
+    success: bool = True
+    data: dict
+    message: str = None
+
+class ErrorResponse(BaseModel):
+    success: bool = False
+    data: dict = None
+    message: str
+    errors: list = []
