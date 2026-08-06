@@ -104,14 +104,13 @@ class ProductUpdate(BaseModel):
 
 
 
-
 class SuccessResponse(BaseModel):
     success: bool = True
-    data: dict
-    message: str = None
+    data: Optional[list | dict] = None  
+    message: str = ""
 
 class ErrorResponse(BaseModel):
     success: bool = False
-    data: dict = None
-    message: str
+    data: Optional[dict] = None
+    message: str = ""
     errors: list = []
