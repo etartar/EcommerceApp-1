@@ -1,81 +1,95 @@
 # E-Ticaret API Projesi
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status, Depends
 from pydantic import BaseModel
-from fastapi import HTTPException
-from fastapi import status
 from typing import List
 import logging
+from sqlalchemy.orm import Session
+
+# Kendi yazdığım dosyalar
+import crud
+from schemas import CreateCategoryRequest, UpdateCategoryRequest, CategoryResponse, SuccessResponse, ErrorResponse
+from database import SessionLocal 
 
 logging.basicConfig(level=logging.INFO)
 
-from schemas import CreateCategoryRequest, UpdateCategoryRequest, CategoryResponse, SuccessResponse, ErrorResponse
-
 app = FastAPI()
+
+# Veritabanı Session bağımlılığı
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 
 class Product(BaseModel):
     id: int
     name: str
     price: float
 
+class ProductCreate(BaseModel):
+    name: str
+    price: float
 
-productList = []
+# productList'i sildim çünkü veritabanına bağladım
 categoryList = []
 
-# 1. GET /products (Tüm ürünleri listele)
+# 1. GET /products (Tüm ürünleri getir)
 @app.get("/products")
-def get_products():
-    return SuccessResponse(success=True, data=productList, message="Urunler listelendi.")
+def get_products(db: Session = Depends(get_db)):
+    db_products = crud.get_products(db)
+    return SuccessResponse(success=True, data=db_products, message="Urunler listelendi.")
+
 
 # 2. GET /products/{id} (Sadece ID'sini verdiğin ürünü getir)
 @app.get("/products/{id}")
-def get_product(id: int):
-    for product in productList:
-        if product["id"] == id:
-            return SuccessResponse(success=True, data=product, message="Urun bulundu.")
+def get_product(id: int, db: Session = Depends(get_db)):
+    db_product = crud.get_product_by_id(db, id)
+    if db_product:
+        return SuccessResponse(success=True, data=db_product, message="Urun bulundu.")
     
     logging.warning(f"Urun bulunamadi! ID: {id}")
     raise HTTPException(
         status_code=404, 
-        detail=ErrorResponse(message="Product not found", errors=[f"ID {id} bulunamadi"]).model_dump()
+        detail=ErrorResponse(success=False, message="Product not found", errors=[f"ID {id} bulunamadi"]).model_dump()
     )
+
 
 # 3. POST /products (Yeni ürün ekle)
 @app.post("/products", status_code=status.HTTP_201_CREATED)
-def create_product(product: Product):
-    productList.append(product.model_dump()) 
-    return SuccessResponse(success=True, data=product.model_dump(), message="Urun basariyla eklendi.")
+def create_product(product: ProductCreate, db: Session = Depends(get_db)):
+    db_product = crud.create_product(db=db, name=product.name, price=product.price)
+    return SuccessResponse(success=True, data=db_product, message="Urun basariyla eklendi.")
+
 
 # 4. PUT /products/{id} (Mevcut ürünü güncelle)
 @app.put("/products/{id}")
-def update_product(id: int, updated_product: Product):
-    for index, product in enumerate(productList):
-        if product["id"] == id:
-            productList[index] = updated_product.model_dump()
-            
-            return SuccessResponse(success=True, data=productList[index], message="Urun guncellendi.")
-    
+def update_product(id: int, updated_product: ProductCreate, db: Session = Depends(get_db)):
+    db_product = crud.update_product(db=db, product_id=id, new_name=updated_product.name, new_price=updated_product.price)
+    if db_product:
+        return SuccessResponse(success=True, data=db_product, message="Urun guncellendi.")
+        
     logging.warning(f"Urun bulunamadi! ID: {id}")
-    
     raise HTTPException(
         status_code=404, 
         detail=ErrorResponse(success=False, message="Product not found").model_dump()
     )
 
+
 # 5. DELETE /products/{id} (Ürünü sil)
 @app.delete("/products/{id}")
-def delete_product(id: int):
-    for index, product in enumerate(productList):
-        if product["id"] == id:
-            deleted = productList.pop(index)
-            
-            return SuccessResponse(success=True, data=deleted, message="Urun silindi.")
-    
+def delete_product(id: int, db: Session = Depends(get_db)):
+    success = crud.delete_product(db=db, product_id=id)
+    if success:
+        return SuccessResponse(success=True, data={"id": id}, message="Urun silindi.")
+        
     logging.warning(f"Urun bulunamadi! ID: {id}")
-    
     raise HTTPException(
         status_code=404, 
         detail=ErrorResponse(success=False, message="Product not found").model_dump()
     )
+
 
 # 1. GET /categories (Tüm kategorileri listele)
 @app.get("/categories")
