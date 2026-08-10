@@ -93,69 +93,39 @@ def delete_product(id: int, db: Session = Depends(get_db)):
 
 # 1. GET /categories (Tüm kategorileri listele)
 @app.get("/categories")
-def get_categories():
-    
-    return SuccessResponse(success=True, data=categoryList, message="Kategoriler basariyla listelendi.")
-
+def get_categories(db: Session = Depends(get_db)):
+    db_categories = crud.get_categories(db)
+    return SuccessResponse(success=True, data=db_categories, message="Kategoriler basariyla listelendi.")
 
 # 2. GET /categories/{id} (ID'ye göre kategori getir)
 @app.get("/categories/{id}")
-def get_category(id: int):
-    for category in categoryList:
-        if category["id"] == id:
-            # Başarılı durum entegrasyonu
-            return SuccessResponse(success=True, data=category, message="Kategori bulundu.")
+def get_category(id: int, db: Session = Depends(get_db)):
+    db_category = crud.get_category_by_id(db, id)
+    if db_category:
+        return SuccessResponse(success=True, data=db_category, message="Kategori bulundu.")
 
     logging.warning(f"Kategori bulunamadi! ID: {id}")
     raise HTTPException(
         status_code=404, 
-        detail=ErrorResponse(success=False, message="Category not found").model_dump()
+        detail=ErrorResponse(success=False, message="Category not found", errors=[f"ID {id} bulunamadi"]).model_dump()
     )
+
 
 # 3. POST /categories (Yeni kategori ekle)
 @app.post("/categories", status_code=status.HTTP_201_CREATED)
-def create_category(category_data: CreateCategoryRequest):
-    for category in categoryList:
-        if category["name"] == category_data.name:
-            logging.warning(f"Ayni isimde kategori ekleme denemesi: {category_data.name}")
-          
-            raise HTTPException(
-                status_code=400,
-                detail=ErrorResponse(
-                    success=False, 
-                    message=f"'{category_data.name}' isminde bir kategori zaten mevcut."
-                ).model_dump()
-            )
-            
-    new_id = len(categoryList) + 1
-    new_category = {
-        "id": new_id,
-        "name": category_data.name,
-        "description": category_data.description
-    }
-    categoryList.append(new_category)
-    
-    # Başarılı durum entegrasyonu
-    return SuccessResponse(success=True, data=new_category, message="Kategori basariyla olusturuldu.")
-
+def create_category(category_data: CreateCategoryRequest, db: Session = Depends(get_db)):
+    db_category = crud.create_category(db=db, name=category_data.name)
+    return SuccessResponse(success=True, data=db_category, message="Kategori basariyla olusturuldu.")
+  
 
 # 4. PUT /categories/{id} (Kategori güncelle)
 @app.put("/categories/{id}")
-def update_category(id: int, category_data: UpdateCategoryRequest):
-    for index, category in enumerate(categoryList):
-        if category["id"] == id:
-            updated_category = {
-                "id": id,
-                "name": category_data.name,
-                "description": category_data.description
-            }
-            categoryList[index] = updated_category
-            
-            # Başarılı durum entegrasyonu
-            return SuccessResponse(success=True, data=updated_category, message="Kategori basariyla guncellendi")
+def update_category(id: int, category_data: UpdateCategoryRequest, db: Session = Depends(get_db)):
+    db_category = crud.update_category(db=db, category_id=id, new_name=category_data.name)
+    if db_category:
+        return SuccessResponse(success=True, data=db_category, message="Kategori basariyla guncellendi")
             
     logging.warning(f"Guncellenecek kategori bulunamadi! ID: {id}")
-   
     raise HTTPException(
         status_code=404, 
         detail=ErrorResponse(success=False, message="Category not found").model_dump()
@@ -164,16 +134,12 @@ def update_category(id: int, category_data: UpdateCategoryRequest):
 
 # 5. DELETE /categories/{id} (Kategori sil)
 @app.delete("/categories/{id}")
-def delete_category(id: int):
-    for index, category in enumerate(categoryList):
-        if category["id"] == id:
-            deleted_category = categoryList.pop(index)
-            
-            # Başarılı durum entegrasyonu
-            return SuccessResponse(success=True, data=deleted_category, message="Kategori basariyla silindi")
+def delete_category(id: int, db: Session = Depends(get_db)):
+    success = crud.delete_category(db=db, category_id=id)
+    if success:
+        return SuccessResponse(success=True, data={"id": id}, message="Kategori basariyla silindi")
             
     logging.warning(f"Silinecek kategori bulunamadi! ID: {id}")
-    # hata entegrasyonu
     raise HTTPException(
         status_code=404, 
         detail=ErrorResponse(success=False, message="Category not found").model_dump()
