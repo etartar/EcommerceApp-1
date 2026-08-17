@@ -5,4 +5,4 @@ class CategoryDB(Base):
     __tablename__ = "categories" # SQL Server'da oluşacak tablonun adı
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    name = Column(String, index=True, nullable=False)
+    name = Column(String(100), index=True, nullable=False)
