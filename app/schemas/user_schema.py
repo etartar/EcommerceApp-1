@@ -5,6 +5,11 @@ class UserLoginRequest(BaseModel):
     username: str
     password: str
 
+ class UserRegisterRequest(BaseModel):
+    username: str
+    password: str
+    role: str = "user" # Varsayılan olarak normal kullanıcı atıyoruz
+
 # Kimlik doğrulandıktan sonra sistemin kullanıcıya vereceği Token şablonu
 class TokenResponse(BaseModel):
     access_token: str

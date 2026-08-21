@@ -2,40 +2,52 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 
+from sqlalchemy.orm import Session
+from app.data.database import get_db
+from app.models.user import User
 
-from app.schemas.user_schema import UserLoginRequest, TokenResponse
+from app.schemas.user_schema import UserLoginRequest, TokenResponse, UserRegisterRequests
 from app.security import verify_password, create_access_token, get_password_hash, SECRET_KEY, ALGORITHM
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
-# Sistemi test edebilmek için geçici sahte veritabanı 
-fake_users_db = {
-    "buse": {
-        "username": "buse",
-        "hashed_password": get_password_hash("123456"), 
-        "role": "admin"
-    },
-    "misafir": {
-        "username": "misafir",
-        "hashed_password": get_password_hash("123456"),
-        "role": "user" # Bu normal bir kullanıcı
-    }
-}
 
 # AUTHENTICATION (KİMLİK DOĞRULAMA - Sen kimsin?) 
 @router.post("/login", response_model=TokenResponse)
-def login(request: UserLoginRequest):
-    user = fake_users_db.get(request.username)
-    
+def login(request: UserLoginRequest, db: Session = Depends(get_db)):
+
+    # Veri tabanında bu kullanıcıyı arıyoruz
+    user = db.query(User).filter(User.username == request.username).first()
+
     # Kişi iddia ettiği kişi mi? (Şifre kontrolü)
-    if not user or not verify_password(request.password, user["hashed_password"]):
+    if not user or not verify_password(request.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Hatalı kullanıcı adı veya şifre")
-    
+
     # Şifre doğruysa ona geçiş iznini (Token) veriyoruz
-    access_token = create_access_token(data={"sub": user["username"], "role": user["role"]})
+    access_token = create_access_token(data={"sub": user.username, "role": user.role})
     return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/register")
+def kayit_ol(request: UserRegisterRequest, db: Session = Depends(get_db)):
+    mevcut_kullanici = db.query(User).filter(User.username == request.username).first()
+    if mevcut_kullanici:
+        raise HTTPException(status_code=400, detail="Bu kullanıcı adı zaten kullanılıyor!")
+    
+    gizli_sifre = get_password_hash(request.password)
+    
+    yeni_kullanici = User(
+        username=request.username,
+        hashed_password=gizli_sifre,
+        role=request.role
+    )
+    
+    db.add(yeni_kullanici)
+    db.commit() 
+    
+    return {"mesaj": f"{yeni_kullanici.username} başarıyla kaydedildi!"}
+
 
 # Gelen token'ı çözen ve süresini kontrol eden güvenlik aracı
 def get_current_user(token: str = Depends(oauth2_scheme)):
